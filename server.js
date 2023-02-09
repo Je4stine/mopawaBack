@@ -27,7 +27,9 @@ const generateToken = async (req,res)=>{
     const auth = new Buffer.from(`${consumer}:${secret}`).toString("base64");
     const{phone,amount}=req.body
 
-    axios.get(
+
+    //generate token first
+    let token = await axios.get(
         "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials",{
             headers:{
                 authorization:`Basic ${auth}`
@@ -35,40 +37,52 @@ const generateToken = async (req,res)=>{
         }
     ).then(async (response)=>{
         console.log("Token: ",response.data.access_token)
-        let token = response.data.access_token
-        axios.post(
-            "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest",
-            {    
-              "BusinessShortCode":"174379",    
-              "Password": "MTc0Mzc5YmZiMjc5ZjlhYTliZGJjZjE1OGU5N2RkNzFhNDY3Y2QyZTBjODkzMDU5YjEwZjc4ZTZiNzJhZGExZWQyYzkxOTIwMTYwMjE2MTY1NjI3",    
-              "Timestamp":"20160216165627",    
-              "TransactionType": "CustomerPayBillOnline",    
-              "Amount":"1",    
-              "PartyA":"254748737342",    
-              "PartyB":"174379",    
-              "PhoneNumber":"254748737342",    
-              "CallBackURL":"https://0350-102-215-189-220.ngrok.io ",    
-              "AccountReference":"Test",    
-              "TransactionDesc":"Test"
-             },
-             {
-                headers:{
-                    Authorization:`Bearer ${token}`
-                }
-             },
-             
-        ).then((response)=>{
-            res.status(200).json(response)
-        }).catch(err=>{
-            let error = {}
-            if(err.response){
-                error.status=err.status||400
-                error.message=err.config.data||""
-                error.code=err.code||""
-                error.url=err.config.url||""
+        return response.data.access_token
+        
+    }).catch(err=>{
+        let error = {}
+        if(err.response){
+            error.status=err.status||400
+            error.message=err.config.data||""
+            error.code=err.code||""
+            error.url=err.config.url||""
+        }
+        res.status(400).json(error)
+    })
+
+    //Get the data next
+    await axios.post(
+        "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest",
+        {    
+          "BusinessShortCode":"174379",    
+          "Password": "MTc0Mzc5YmZiMjc5ZjlhYTliZGJjZjE1OGU5N2RkNzFhNDY3Y2QyZTBjODkzMDU5YjEwZjc4ZTZiNzJhZGExZWQyYzkxOTIwMTYwMjE2MTY1NjI3",    
+          "Timestamp":"20160216165627",    
+          "TransactionType": "CustomerPayBillOnline",    
+          "Amount":"1",    
+          "PartyA":"254748737342",    
+          "PartyB":"174379",    
+          "PhoneNumber":"254748737342",    
+          "CallBackURL":"https://0350-102-215-189-220.ngrok.io ",    
+          "AccountReference":"Test",    
+          "TransactionDesc":"Test"
+         },
+         {
+            headers:{
+                Authorization:`Bearer ${token}`
             }
-            res.status(400).json(error)
-        })
+         },
+         
+    ).then((response)=>{
+        res.status(200).json(response)
+    }).catch(err=>{
+        let error = {}
+        if(err.response){
+            error.status=err.status||400
+            error.message=err.config.data||""
+            error.code=err.code||""
+            error.url=err.config.url||""
+        }
+        res.status(400).json(error)
     })
 }
 
